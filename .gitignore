@@ -1,0 +1,16 @@
+.build/
+dist/
+.local-backend/
+work/
+outputs/
+.DS_Store
+.env
+.env.*
+*.p12
+*.pfx
+*.key
+*.pem
+*.mobileprovision
+*.log
+__pycache__/
+*.pyc

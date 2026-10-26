@@ -1,0 +1,29 @@
+name: Source checks
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  privacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check_publish_tree.py --self-test
+      - run: python3 scripts/check_binary_privacy.py --self-test
+      - run: python3 scripts/check_publish_tree.py
+  core:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: ./scripts/test.sh
+      - run: swift build -c release -Xswiftc -debug-prefix-map -Xswiftc "$PWD=/src/PlainMount" -Xswiftc -file-prefix-map -Xswiftc "$PWD=/src/PlainMount"
+      - name: Check stripped app binary
+        run: |
+          binary_dir=$(swift build -c release --show-bin-path)
+          cp "$binary_dir/PlainMount" .build/PlainMount-privacy-check
+          strip -S -x .build/PlainMount-privacy-check
+          python3 scripts/check_binary_privacy.py .build/PlainMount-privacy-check

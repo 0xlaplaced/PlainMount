@@ -249,7 +249,11 @@ struct ContentView: View {
                 Button("Tanı dosyasını kaydet…") { model.exportDiagnostics() }.disabled(model.busy)
                 Text("Tanı dosyası disk adlarını ve yerel yolları içerir; yalnızca seçtiğin konuma kaydedilir.").font(Theme.small).foregroundStyle(.secondary)
             }.panel()
-            Text("PlainMount \(AppBuild.version) · macOS 14+ · Kişisel kullanım\nHarici yazma bileşenleri bu kaynak dağıtımına dahil değildir.").font(Theme.small).foregroundStyle(.secondary)
+            Text("PlainMount \(AppBuild.version) · macOS 14+ · Kişisel kullanım").font(Theme.small).foregroundStyle(.secondary)
+            if model.backend.ready {
+                Text("Uygulama kodu MIT lisanslıdır. NTFS-3G ve FUSE-T kendi lisanslarına tabidir; FUSE-T ticari olmayan kullanım için ücretsizdir.")
+                    .font(Theme.small).foregroundStyle(.secondary)
+            }
         }
     }
 

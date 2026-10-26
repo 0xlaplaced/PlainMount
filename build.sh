@@ -29,6 +29,13 @@ if [ -n "$runtime_dir" ]; then
     mkdir -p "$app/Contents/Resources/Backend"
     cp "$runtime_dir/ntfs-3g" "$runtime_dir/libfuse-t.dylib" "$runtime_dir/go-nfsv4" "$app/Contents/Resources/Backend/"
     cp -R "$runtime_dir/licenses/." "$app/Contents/Resources/Licenses/"
+    if [ -d "$runtime_dir/source" ]; then
+        mkdir -p "$app/Contents/Resources/Source"
+        cp -R "$runtime_dir/source/." "$app/Contents/Resources/Source/"
+    fi
+    python3 scripts/check_binary_privacy.py "$app/Contents/Resources/Backend/ntfs-3g"
+    python3 scripts/check_binary_privacy.py "$app/Contents/Resources/Backend/libfuse-t.dylib"
+    /usr/bin/codesign --verify --strict "$app/Contents/Resources/Backend/go-nfsv4"
     /usr/bin/codesign --force --sign - "$app/Contents/Resources/Backend/ntfs-3g"
 fi
 cp LICENSE "$app/Contents/Resources/Licenses/PlainMount-MIT.txt"
@@ -66,4 +73,19 @@ mkdir -p dist
 if [ -d "dist/PlainMount.app" ]; then /bin/rm -rf "dist/PlainMount.app"; fi
 /usr/bin/ditto --norsrc --noextattr "$app" "dist/PlainMount.app"
 /usr/bin/ditto -c -k --norsrc --keepParent "$app" "dist/PlainMount-$version-arm64.zip"
+python3 - "dist/PlainMount-$version-arm64.zip" <<'PY'
+from pathlib import Path
+import sys
+import zipfile
+
+archive = Path(sys.argv[1])
+clean = archive.with_suffix('.clean.zip')
+with zipfile.ZipFile(archive) as source, zipfile.ZipFile(clean, 'w') as output:
+    for entry in source.infolist():
+        # Keep executable permissions, discard Unix owner IDs and extra metadata.
+        entry.extra = b''
+        entry.comment = b''
+        output.writestr(entry, source.read(entry))
+clean.replace(archive)
+PY
 echo "Ready: $PWD/dist/PlainMount-$version-arm64.zip"

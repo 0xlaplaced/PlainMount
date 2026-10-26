@@ -2,7 +2,7 @@ import Foundation
 import Darwin
 
 public enum AppBuild {
-    public static let version = "1.0.3"
+    public static let version = "1.0.4"
     public static let installationPath = "/Applications/PlainMount.app"
 
     public static func isInstalled(at path: String = Bundle.main.bundleURL.path) -> Bool {

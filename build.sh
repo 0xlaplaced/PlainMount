@@ -52,6 +52,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <plist version="1.0"><dict>
 <key>CFBundleIdentifier</key><string>org.plainmount.app</string>
 <key>CFBundleName</key><string>PlainMount</string>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>tr</string></array>
 <key>CFBundleDisplayName</key><string>PlainMount</string>
 <key>CFBundleExecutable</key><string>PlainMount</string>
 <key>CFBundlePackageType</key><string>APPL</string>
@@ -61,12 +63,21 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>NSPrincipalClass</key><string>NSApplication</string>
-<key>NSRemovableVolumesUsageDescription</key><string>Seçtiğiniz harici diskin dosyalarını ve bağlantısını yönetmek için erişim gerekir.</string>
-<key>NSNetworkVolumesUsageDescription</key><string>Yerel NTFS yazma bağlantısındaki dosyalara Finder ile erişmek için izin gerekir.</string>
+<key>NSRemovableVolumesUsageDescription</key><string>Access is needed to manage files and the connection of your selected external drive.</string>
+<key>NSNetworkVolumesUsageDescription</key><string>Access is needed to open files through the local NTFS writing connection in Finder.</string>
 <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
 <key>NSHumanReadableCopyright</key><string>Copyright 2026 PlainMount contributors. MIT License.</string>
 </dict></plist>
 PLIST
+mkdir -p "$app/Contents/Resources/en.lproj" "$app/Contents/Resources/tr.lproj"
+cat > "$app/Contents/Resources/en.lproj/InfoPlist.strings" <<'STRINGS'
+"NSRemovableVolumesUsageDescription" = "Access is needed to manage files and the connection of your selected external drive.";
+"NSNetworkVolumesUsageDescription" = "Access is needed to open files through the local NTFS writing connection in Finder.";
+STRINGS
+cat > "$app/Contents/Resources/tr.lproj/InfoPlist.strings" <<'STRINGS'
+"NSRemovableVolumesUsageDescription" = "Seçtiğiniz harici diskin dosyalarını ve bağlantısını yönetmek için erişim gerekir.";
+"NSNetworkVolumesUsageDescription" = "Yerel NTFS yazma bağlantısındaki dosyalara Finder ile erişmek için izin gerekir.";
+STRINGS
 /usr/bin/codesign --force --sign - "$app"
 /usr/bin/codesign --verify --deep --strict "$app"
 mkdir -p dist

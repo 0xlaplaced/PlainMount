@@ -12,11 +12,11 @@ public struct CommandResult {
     public let error: String
     public var text: String { String(data: output, encoding: .utf8) ?? "" }
     public var failureDetails: String {
-        var parts = ["Çıkış kodu: \(status)"]
+        var parts = [L("Exit status: %1$@", String(describing: status))]
         let stdout = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let stderr = error.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !stdout.isEmpty { parts.append("Çıktı:\n" + String(stdout.prefix(4000))) }
-        if !stderr.isEmpty { parts.append("Hata:\n" + String(stderr.prefix(4000))) }
+        if !stdout.isEmpty { parts.append(L("Output:\n") + String(stdout.prefix(4000))) }
+        if !stderr.isEmpty { parts.append(L("Error:\n") + String(stderr.prefix(4000))) }
         return parts.joined(separator: "\n")
     }
 }
@@ -60,7 +60,7 @@ public final class RunningCommand {
         }
         guard code == 0 else {
             try? out.close(); try? err.close(); try? FileManager.default.removeItem(at: folder)
-            throw ToolError.message("İşlem başlatılamadı: \(String(cString: strerror(code)))")
+            throw ToolError.message(L("Could not start the process: %1$@", String(describing: String(cString: strerror(code)))))
         }
         pid = child; self.folder = folder; stdoutURL = outURL; stderrURL = errURL
         stdoutHandle = out; stderrHandle = err
@@ -68,11 +68,11 @@ public final class RunningCommand {
 
     public func poll() throws -> Int32? {
         if let exitStatus { return exitStatus }
-        guard !reapScheduled else { throw ToolError.message("İşlem yaşam döngüsü devredildi.") }
+        guard !reapScheduled else { throw ToolError.message(L("Process lifecycle has been handed off.")) }
         var raw: Int32 = 0
         let result = waitpid(pid, &raw, WNOHANG)
         if result == 0 || (result == -1 && errno == EINTR) { return nil }
-        guard result == pid else { throw ToolError.message("Başlatılan işlemin durumu doğrulanamadı.") }
+        guard result == pid else { throw ToolError.message(L("The process status could not be verified. Refresh drive status before trying again.")) }
         let decoded = (raw & 0x7f) == 0 ? (raw >> 8) & 0xff : 128 + (raw & 0x7f)
         exitStatus = decoded
         return decoded
@@ -128,7 +128,7 @@ public enum Runner {
             if ProcessInfo.processInfo.systemUptime >= deadline {
                 let stopped = command.stop()
                 let details = (try? command.output().failureDetails) ?? ""
-                throw ToolError.message("İşlem zaman aşımına uğradı. \(stopped ? "Başlatılan işlem durduruldu." : "İşlemin sonlandığı henüz doğrulanamadı; yeni disk işlemi başlatmayın.")\n\(details)")
+                throw ToolError.message(L("The operation timed out. %1$@\n%2$@", String(describing: stopped ? L("The started process was stopped.") : L("The process has not been confirmed as stopped. Do not start another drive operation.")), String(describing: details)))
             }
             Thread.sleep(forTimeInterval: 0.01)
         }

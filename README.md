@@ -4,13 +4,13 @@ A free native macOS app for managing NTFS drives. PlainMount's own application c
 
 ## Download and install
 
-Download **PlainMount-1.0.4-arm64.zip** from [Releases](https://github.com/0xlaplaced/PlainMount/releases/latest), extract it, and move **PlainMount.app** to **Applications** before opening it. Requires Apple Silicon (M1 or later) and macOS 14 or later; the interface is Turkish.
+Download **PlainMount-1.0.5-arm64.zip** from [Releases](https://github.com/0xlaplaced/PlainMount/releases/latest), extract it, and move **PlainMount.app** to **Applications** before opening it. Requires Apple Silicon (M1 or later) and macOS 14 or later; English is the default interface language. Choose **Settings → Language → Türkçe** to switch to Turkish; your choice is saved and the interface updates immediately.
 
 The ready-to-run ZIP includes the NTFS writing components. No Homebrew, Terminal commands, account, subscription or separate driver installer is needed.
 
 1. Open PlainMount from Applications. This build is ad-hoc signed, without Apple notarization. If macOS blocks the first launch, use **System Settings → Privacy & Security → Open Anyway** after attempting to open it. See [Apple's instructions](https://support.apple.com/en-gb/102445).
 2. For NTFS writing, enable PlainMount in **System Settings → Privacy & Security → Full Disk Access**, then quit and reopen the app.
-3. Select your NTFS drive and choose **Yazmayı etkinleştir**. macOS asks for administrator approval; the app does not store your password. Use the app to disconnect the drive when finished.
+3. Select your NTFS drive and choose **Enable writing**. macOS asks for administrator approval; the app does not store your password. Use the app to disconnect the drive when finished.
 
 **Component licenses:** PlainMount code is MIT; NTFS-3G is GPL; libfuse is LGPL. The bundled FUSE-T server is **free for non-commercial use**, with a separate license required for commercial use or bundling with commercial software. Its [upstream terms](https://github.com/macos-fuse-t/fuse-t/blob/1.2.6/License.txt) are retained in the app. The complete ZIP is not covered solely by MIT. Corresponding NTFS-3G/libfuse source archives and their build recipe are included inside the app, alongside the license notices.
 
@@ -23,7 +23,7 @@ The ready-to-run ZIP includes the NTFS writing components. No Homebrew, Terminal
 - Explain macOS Full Disk Access requirements before changing a connection.
 - Light, dark and system appearance; menu bar access and session-only activity history.
 
-The current interface is in Turkish. Apple Silicon and macOS 14 or later are required.
+English is the default; Turkish is available in Settings → Language. Apple Silicon and macOS 14 or later are required.
 
 ## Build
 

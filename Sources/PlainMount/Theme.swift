@@ -1,4 +1,5 @@
 import SwiftUI
+import MountCore
 
 // Single native theme. System colors track macOS appearance and contrast preferences.
 enum Theme {
@@ -42,5 +43,5 @@ struct Panel: ViewModifier {
 extension View { func panel() -> some View { modifier(Panel()) } }
 
 func capacity(_ value: Int64) -> String {
-    ByteCountFormatter.string(fromByteCount: value, countStyle: .decimal)
+    value.formatted(.byteCount(style: .decimal).locale(L10n.language.locale))
 }

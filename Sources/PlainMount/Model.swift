@@ -14,22 +14,28 @@ struct PendingAction: Identifiable {
     let kind: String
     var title: String {
         switch kind {
-        case "write": return "\(disk.name) için yazmayı etkinleştir"
-        case "eject": return "\(disk.name) diskini güvenle çıkar"
-        default: return "\(disk.name) bağlantısını kes"
+        case "write": return L("Enable writing for %1$@", String(describing: disk.name))
+        case "eject": return L("Safely eject %1$@", String(describing: disk.name))
+        default: return L("Disconnect %1$@", String(describing: disk.name))
         }
     }
     var detail: String {
         switch kind {
-        case "write": return "\(disk.id) · \(capacity(disk.size))\nDiskin mevcut bağlantısı kesilip yazılabilir olarak yeniden bağlanacak. Açık dosyaları kapatın. macOS yönetici izni isteyecek. Disk otomatik onarılmaz; hazırda bekletme verisi silinmez."
-        case "eject": return "\(disk.parent) üzerindeki tüm bölümler çıkarılacak. Açık dosyaları kapatın. Başarı mesajından sonra kabloyu ayırabilirsiniz."
-        default: return "Bu bölümün açık dosyalarını kapatın. Fiziksel diski ayırmak için Güvenle çıkar seçeneğini kullanın."
+        case "write": return L("%1$@ · %2$@\nThe drive will be disconnected and reconnected with write access. Close open files first. macOS will ask for administrator approval. The app will not repair the drive or remove hibernation data.", String(describing: disk.id), String(describing: capacity(disk.size)))
+        case "eject": return L("All volumes on %1$@ will be ejected. Close open files first. Disconnect the cable after the success message.", String(describing: disk.parent))
+        default: return L("Close open files on this volume. To unplug the physical drive, choose Safely eject.")
         }
     }
-    var button: String { kind == "write" ? "Yazmayı etkinleştir" : kind == "eject" ? "Diski çıkar" : "Bağlantıyı kes" }
+    var button: String { kind == "write" ? L("Enable writing") : kind == "eject" ? L("Eject drive") : L("Disconnect") }
 }
 
 @MainActor final class Model: ObservableObject {
+    @Published var language = L10n.language {
+        didSet {
+            L10n.save(language)
+            L10n.configureProcess(language)
+        }
+    }
     @Published var disks: [DiskVolume] = []
     @Published var selected: String?
     @Published var page = "disks"
@@ -80,7 +86,7 @@ struct PendingAction: Identifiable {
                     if kind == "write" { try WriteMount.request(disk) }
                     else { try DiskService.perform(kind, on: disk) }
                 }.value
-                let text = kind == "write" ? "\(disk.name): yazılabilir bağlama oluşturuldu." : kind == "eject" ? "\(disk.name) güvenle çıkarıldı. Kabloyu ayırabilirsiniz." : kind == "unmount" ? "\(disk.name) bağlantısı kesildi." : "\(disk.name) salt okunur bağlandı."
+                let text = kind == "write" ? L("%1$@: write access enabled.", String(describing: disk.name)) : kind == "eject" ? L("%1$@ safely ejected. You can disconnect the cable.", String(describing: disk.name)) : kind == "unmount" ? L("%1$@ disconnected.", String(describing: disk.name)) : L("%1$@ mounted read-only.", String(describing: disk.name))
                 record(text)
             } catch {
                 showError(error)
@@ -101,7 +107,7 @@ struct PendingAction: Identifiable {
         Task {
             do {
                 try await Task.detached(priority: .userInitiated) { try WriteMount.requestAccessCheck(disk) }.value
-                accessCheckResult = "\(disk.name) aygıtına erişim doğrulandı. Diskin bağlantısı değiştirilmedi."
+                accessCheckResult = L("Access to %1$@ verified. The drive connection was not changed.", String(describing: disk.name))
                 needsDiskAccess = false
                 record(accessCheckResult!)
             } catch {
@@ -117,7 +123,7 @@ struct PendingAction: Identifiable {
 
     func openDiskAccessSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") else { return }
-        if !NSWorkspace.shared.open(url) { error = "Sistem Ayarları → Gizlilik ve Güvenlik → Tam Disk Erişimi bölümünü açın." }
+        if !NSWorkspace.shared.open(url) { error = L("Open System Settings → Privacy & Security → Full Disk Access.") }
     }
 
     func revealApplication() {
@@ -135,8 +141,8 @@ struct PendingAction: Identifiable {
         Task {
             do {
                 let current = try await Task.detached { try DiskService.revalidate(disk) }.value
-                guard current.mountPoint == path else { throw ToolError.message("Diskin bağlama yolu değişti. Listeyi yenileyin.") }
-                if !NSWorkspace.shared.open(URL(fileURLWithPath: path)) { throw ToolError.message("Finder bu konumu açamadı.") }
+                guard current.mountPoint == path else { throw ToolError.message(L("The drive mount location changed. Refresh the list.")) }
+                if !NSWorkspace.shared.open(URL(fileURLWithPath: path)) { throw ToolError.message(L("Finder could not open this location. Refresh the drive list and try again.")) }
             } catch { showError(error) }
         }
     }
@@ -148,14 +154,14 @@ struct PendingAction: Identifiable {
 
     func exportDiagnostics() {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "PlainMount-Tani.json"
-        panel.title = "Disk tanısını kaydet"
+        panel.nameFieldStringValue = "PlainMount-Diagnostics.json"
+        panel.title = L("Save drive diagnostics")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(Diagnostic(disks: disks, backend: backend)).write(to: url, options: .atomic)
-            record("Tanı dosyası kaydedildi. Disk adlarını ve yerel yolları içerir.")
+            record(L("Diagnostics saved. The file includes drive names and local paths."))
         } catch { showError(error) }
     }
 }

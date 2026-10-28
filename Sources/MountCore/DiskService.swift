@@ -26,7 +26,7 @@ public struct DiskVolume: Identifiable, Codable, Equatable, Sendable {
     public let identity: DiskIdentity
     public var isNTFS: Bool { filesystem.lowercased() == "ntfs" }
     public var mounted: Bool { mountPoint != nil }
-    public var status: String { !mounted ? "Bağlı değil" : writable ? "Okuma ve yazma" : "Salt okunur" }
+    public var status: String { !mounted ? L("Not mounted") : writable ? L("Read and write") : L("Read-only") }
     public var used: Int64? { free.map { max(0, size - $0) } }
     public var usedFraction: Double { size > 0 ? Double(used ?? 0) / Double(size) : 0 }
 }
@@ -39,17 +39,17 @@ public enum DiskService {
 
     public static func plist(_ data: Data) throws -> [String: Any] {
         guard let value = try PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else {
-            throw ToolError.message("macOS disk bilgisi okunamadı.")
+            throw ToolError.message(L("macOS drive information could not be read. Refresh the list and try again."))
         }
         return value
     }
 
     public static func info(_ id: String) throws -> [String: Any] {
-        guard validDevice(id) else { throw ToolError.message("Geçersiz disk kimliği.") }
+        guard validDevice(id) else { throw ToolError.message(L("Invalid drive identifier. Refresh the list and select the drive again.")) }
         // Metadata only: diskutil info can block opening a USB whole disk on macOS 27.
         guard let session = DASessionCreate(kCFAllocatorDefault),
               let disk = DADiskCreateFromBSDName(kCFAllocatorDefault, session, id),
-              let raw = DADiskCopyDescription(disk) else { throw ToolError.message("Disk bilgisi alınamadı: \(id)") }
+              let raw = DADiskCopyDescription(disk) else { throw ToolError.message(L("Could not get drive information: %1$@", String(describing: id))) }
         let description = raw as NSDictionary
         let parent = DADiskCopyWholeDisk(disk).flatMap { whole in DADiskGetBSDName(whole).map { String(cString: $0) } } ?? id
         let path = description[kDADiskDescriptionVolumePathKey] as? URL
@@ -126,7 +126,7 @@ public enum DiskService {
                 $0.hasPrefix("/dev/" + old.id + " on ") || $0.contains(" on " + personalMountPoint(old.id) + " (")
             }
             if stillMounted {
-                throw ToolError.message("\(old.name) hâlâ bağlı, ancak güncel disk bilgisi alınamadı. Son doğrulanan liste korunuyor; Yenile ile tekrar deneyin.")
+                throw ToolError.message(L("%1$@ is still mounted, but current drive information is unavailable. The last verified list is preserved. Choose Refresh to try again.", String(describing: old.name)))
             }
         }
     }
@@ -185,7 +185,7 @@ public enum DiskService {
 
     public static func revalidate(_ original: DiskVolume) throws -> DiskVolume {
         guard let current = try scan().first(where: { $0.id == original.id }), current.identity == original.identity else {
-            throw ToolError.message("Disk değişti veya çıkarıldı. Listeyi yenileyip diski yeniden seçin.")
+            throw ToolError.message(L("The drive changed or was removed. Refresh the list and select it again."))
         }
         return current
     }
@@ -202,7 +202,7 @@ public enum DiskService {
                 try WriteMount.requestUnmount(sibling)
             }
             _ = try Runner.checked("/usr/sbin/diskutil", ["eject", current.parent])
-        default: throw ToolError.message("Desteklenmeyen disk işlemi.")
+        default: throw ToolError.message(L("Unsupported drive operation. Refresh the list and try again."))
         }
     }
 }

@@ -19,6 +19,7 @@ import Darwin
          "DeviceTreePath": "USB/path", "PartitionMapPartitionOffset": 32256]
     }
     static func main() {
+        L10n.configureProcess(AppLanguage(rawValue: ProcessInfo.processInfo.environment["PLAINMOUNT_TEST_LANGUAGE"] ?? "en") ?? .english)
         check("disk identifiers reject shell syntax, paths and trailing newlines") {
             ["disk9", "disk9s1", "disk12s3s1"].allSatisfy { DiskService.validDevice($0) }
             && ["/dev/disk9", "disk9;id", "disk9\n", "disk9s", "disk-1", "$(id)", "disk9s1/../disk0"].allSatisfy { !DiskService.validDevice($0) }
@@ -111,7 +112,7 @@ import Darwin
                     unmount: { calls.append("unmount"); throw ToolError.message("Volume failed to unmount") },
                     mount: { calls.append("driver") }, restore: { calls.append("restore") })
                 return false
-            } catch { return calls == ["access", "unmount"] && error.localizedDescription.contains("Yazma sürücüsü başlatılmadı") }
+            } catch { return calls == ["access", "unmount"] && error.localizedDescription.contains(L("The current drive connection could not be disconnected. The writing driver was not started.\n")) }
         }
         check("driver failure cleans up and restores an originally mounted disk") {
             var calls: [String] = []
@@ -149,7 +150,7 @@ import Darwin
         check("mounted disk cannot disappear from a transiently empty snapshot") {
             let disk = DiskService.parse(fixture(), allowedParents: ["disk9"])!
             do { try DiskService.validateSnapshot(previous: [disk], current: [], mounts: "/dev/disk9s1 on /Volumes/SampleDisk (ntfs, read-only, fskit)"); return false }
-            catch { return error.localizedDescription.contains("Son doğrulanan liste korunuyor") }
+            catch { return error.localizedDescription.contains(L("%1$@ is still mounted, but current drive information is unavailable. The last verified list is preserved. Choose Refresh to try again.", disk.name)) }
         }
         check("physical removal can clear the previous disk snapshot") {
             let disk = DiskService.parse(fixture(), allowedParents: ["disk9"])!
@@ -172,7 +173,7 @@ import Darwin
             return message.contains("macOS") && !message.contains("Windows") && !message.contains("hibernation")
         }
         check("a generic mount failure does not diagnose a Windows problem") {
-            !DiskAccess.userMessage("NTFS yazma bağlantısı kurulamadı. Driver error 12").contains("Windows")
+            !DiskAccess.userMessage(L("The NTFS writing connection could not be established.") + " Driver error 12").contains("Windows")
         }
         check("invalid access helper does not open a device") {
             do { try WriteMount.accessHelper(["disk9;id", "", "0", "0"]); return false } catch { return true }
@@ -195,7 +196,7 @@ import Darwin
                 try WriteWorkflow.run(initiallyMounted: true, checkAccess: {}, unmount: {}, mount: { throw ToolError.message("startup timeout") },
                     cleanup: { throw ToolError.message("process still running") }, restore: { restored = true })
                 return false
-            } catch { return !restored && error.localizedDescription.contains("yeniden bağlama başlatılmadı") }
+            } catch { return !restored && error.localizedDescription.contains(L("\nReconnection was not started because safe cleanup could not be verified.")) }
         }
         check("only the owned long-lived child is stopped and reaped") {
             let child = try Runner.start("/bin/sleep", ["5"])

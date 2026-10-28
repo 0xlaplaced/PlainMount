@@ -4,8 +4,8 @@ import Darwin
 
 @main enum Bootstrap {
     static func main() {
-        let args = Array(CommandLine.arguments.dropFirst())
         do {
+            let args = try L10n.parseArguments(Array(CommandLine.arguments.dropFirst()))
             if args.first == "--diagnose" {
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -16,20 +16,22 @@ import Darwin
             }
             if args.first == "--mount-helper" {
                 try WriteMount.helper(Array(args.dropFirst()))
-                print("Yazılabilir bağlama oluşturuldu.")
+                print(L("Write access enabled."))
                 return
             }
             if args.first == "--access-helper" {
                 try WriteMount.accessHelper(Array(args.dropFirst()))
-                print("Disk erişimi doğrulandı. Bağlantı değiştirilmedi.")
+                print(L("Drive access verified. The connection was not changed."))
                 return
             }
             if args.first == "--unmount-helper" {
                 try WriteMount.unmountHelper(Array(args.dropFirst()))
-                print("Bağlantı kesildi.")
+                print(L("Drive disconnected."))
                 return
             }
-            guard args.isEmpty else { throw ToolError.message("Bilinmeyen seçenek.") }
+            guard args.isEmpty else { throw ToolError.message(L("Unknown option. Open PlainMount without command-line options.")) }
+            // Set this app's native menu/dialog language before AppKit initializes.
+            UserDefaults.standard.set([L10n.language.rawValue], forKey: "AppleLanguages")
             PlainMountApp.main()
         } catch {
             FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8))
@@ -50,7 +52,7 @@ struct PlainMountApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandGroup(replacing: .help) {
-                Button("Ayarları göster") { model.page = "settings" }
+                Button(L("Show settings")) { model.page = "settings" }
             }
         }
         MenuBarExtra("PlainMount", systemImage: "externaldrive") {
@@ -71,19 +73,19 @@ struct MenuContent: View {
     @EnvironmentObject var model: Model
     @Environment(\.openWindow) private var openWindow
     var body: some View {
-        Text("\(model.ntfsCount) NTFS bölüm")
+        Text(L("NTFS volumes: %1$@", String(describing: model.ntfsCount)))
         ForEach(model.disks.filter(\.isNTFS)) { disk in
-            Menu("\(disk.name) · \(disk.status)") {
-                Button("Finder’da aç") { model.openFinder(disk) }.disabled(!disk.mounted || model.busy || model.stale)
+            Menu(L("%1$@ · %2$@", String(describing: disk.name), String(describing: disk.status))) {
+                Button(L("Open in Finder")) { model.openFinder(disk) }.disabled(!disk.mounted || model.busy || model.stale)
             }
         }
         Divider()
-        Button("Uygulamayı aç") {
+        Button(L("Open application")) {
             openWindow(id: "main")
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
-        Button("Yenile") { Task { await model.refresh() } }.disabled(model.busy || model.scanning)
+        Button(L("Refresh")) { Task { await model.refresh() } }.disabled(model.busy || model.scanning)
         Divider()
-        Button("Çıkış") { NSApplication.shared.terminate(nil) }.keyboardShortcut("q")
+        Button(L("Quit")) { NSApplication.shared.terminate(nil) }.keyboardShortcut("q")
     }
 }

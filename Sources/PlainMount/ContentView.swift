@@ -25,13 +25,14 @@ struct ContentView: View {
                 Divider()
                 HStack(spacing: Theme.sm) {
                     if model.busy || model.scanning { ProgressView().controlSize(.small) }
-                    Text(model.busy ? "Disk işlemi sürüyor…" : model.scanning ? "Diskler taranıyor…" : model.stale ? "Son doğrulanan disk bilgisi · Yenile gerekiyor" : "\(model.disks.count) harici bölüm · \(model.ntfsCount) NTFS")
+                    Text(model.busy ? L("Drive operation in progress…") : model.scanning ? L("Scanning drives…") : model.stale ? L("Last verified drive information · Refresh required") : L("External volumes: %1$@ · NTFS: %2$@", String(describing: model.disks.count), String(describing: model.ntfsCount)))
                     Spacer()
-                    if let date = model.lastRefresh { Text("Son tarama \(date.formatted(date: .omitted, time: .shortened))") }
+                    if let date = model.lastRefresh { Text(L("Last scan %1$@", String(describing: date.formatted(.dateTime.hour().minute().locale(model.language.locale))))) }
                 }.font(Theme.small).foregroundStyle(.secondary).padding(.horizontal, Theme.xl).padding(.vertical, Theme.md)
             }
         }
         .background(Theme.page)
+        .environment(\.locale, model.language.locale)
         .font(Theme.body)
         .frame(minWidth: Theme.minimumWidth, minHeight: Theme.minimumHeight)
         .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
@@ -51,17 +52,17 @@ struct ContentView: View {
                 Image(systemName: "externaldrive.fill").font(Theme.section).foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: Theme.xs) {
                     Text("PlainMount").font(Theme.section)
-                    Text("Mac’in, disklerin.").font(Theme.small).foregroundStyle(.secondary)
+                    Text(L("Your Mac. Your drives.")).font(Theme.small).foregroundStyle(.secondary)
                 }
             }.padding(.top, Theme.lg)
             VStack(spacing: Theme.xs) {
-                nav("Disklerim", icon: "externaldrive", page: "disks")
-                nav("İşlem geçmişi", icon: "clock.arrow.circlepath", page: "activity")
-                nav("Ayarlar", icon: "slider.horizontal.3", page: "settings")
+                nav(L("My drives"), icon: "externaldrive", page: "disks")
+                nav(L("Activity"), icon: "clock.arrow.circlepath", page: "activity")
+                nav(L("Settings"), icon: "slider.horizontal.3", page: "settings")
             }
             Divider()
             VStack(alignment: .leading, spacing: Theme.md) {
-                Text("HARİCİ DİSKLER").font(Theme.label).foregroundStyle(.secondary)
+                Text(L("External drives")).font(Theme.label).foregroundStyle(.secondary)
                 ForEach(model.visible) { disk in
                     Button {
                         model.selected = disk.id
@@ -79,12 +80,12 @@ struct ContentView: View {
                     .accessibilityLabel("\(disk.name), \(disk.status)")
                     .accessibilityAddTraits(model.selected == disk.id ? .isSelected : [])
                 }
-                if model.visible.isEmpty { Text("Disk bağladığında burada görünür.").font(Theme.small).foregroundStyle(.secondary) }
+                if model.visible.isEmpty { Text(L("Connect a drive to see it here.")).font(Theme.small).foregroundStyle(.secondary) }
             }
             Spacer()
             VStack(alignment: .leading, spacing: Theme.sm) {
-                Label("Kişisel sürüm", systemImage: "person.crop.circle").font(Theme.small)
-                Text("\(AppBuild.version) · Apple Silicon").font(Theme.small).foregroundStyle(.secondary)
+                Label(L("Personal edition"), systemImage: "person.crop.circle").font(Theme.small)
+                Text(L("%1$@ · Apple Silicon", String(describing: AppBuild.version))).font(Theme.small).foregroundStyle(.secondary)
             }
         }.padding(Theme.lg).background(.ultraThinMaterial)
     }
@@ -101,25 +102,25 @@ struct ContentView: View {
 
     private var header: some View {
         HStack {
-            Text(model.page == "settings" ? "Ayarlar" : model.page == "activity" ? "İşlem geçmişi" : "Disklerim").font(Theme.section)
+            Text(model.page == "settings" ? L("Settings") : model.page == "activity" ? L("Activity") : L("My drives")).font(Theme.section)
             Spacer()
-            Button { Task { await model.refresh() } } label: { Label("Yenile", systemImage: "arrow.clockwise") }
+            Button { Task { await model.refresh() } } label: { Label(L("Refresh"), systemImage: "arrow.clockwise") }
                 .disabled(model.scanning || model.busy)
                 .keyboardShortcut("r", modifiers: .command)
-                .help("Harici disk listesini yeniden tara")
+                .help(L("Rescan the external drive list"))
         }.padding(.horizontal, Theme.xl).padding(.vertical, Theme.lg)
     }
 
     private var disks: some View {
         VStack(alignment: .leading, spacing: Theme.xl) {
             VStack(alignment: .leading, spacing: Theme.sm) {
-                Text("Diskinle çalış.").font(Theme.title)
-                Text("Bağlantıyı ve erişim durumunu tek yerden yönet.").foregroundStyle(.secondary)
+                Text(L("Work with your drive.")).font(Theme.title)
+                Text(L("Manage connections and access in one place.")).foregroundStyle(.secondary)
             }
             HStack {
-                Text("\(model.ntfsCount) NTFS bölüm").font(Theme.small).foregroundStyle(.secondary)
+                Text(L("NTFS volumes: %1$@", String(describing: model.ntfsCount))).font(Theme.small).foregroundStyle(.secondary)
                 Spacer()
-                Toggle("Yalnızca NTFS", isOn: $model.onlyNTFS).toggleStyle(.checkbox)
+                Toggle(L("Only NTFS"), isOn: $model.onlyNTFS).toggleStyle(.checkbox)
                     .onChange(of: model.onlyNTFS) { _, _ in
                         if !model.visible.contains(where: { $0.id == model.selected }) { model.selected = model.visible.first?.id }
                     }
@@ -129,10 +130,10 @@ struct ContentView: View {
             } else {
                 VStack(spacing: Theme.lg) {
                     Image(systemName: "externaldrive.badge.plus").font(Theme.title).foregroundStyle(.secondary)
-                    Text(model.scanning ? "Diskler aranıyor" : model.stale ? "Disk bilgileri doğrulanamadı" : "Bir harici disk bağla").font(Theme.section)
-                    Text("\(model.onlyNTFS ? "NTFS biçimli" : "Harici") USB ve Thunderbolt diskler burada görünür.").foregroundStyle(.secondary)
+                    Text(model.scanning ? L("Looking for drives") : model.stale ? L("Drive information could not be verified") : L("Connect an external drive")).font(Theme.section)
+                    Text(L("%1$@ USB and Thunderbolt drives appear here.", String(describing: model.onlyNTFS ? L("NTFS-formatted") : L("External")))).foregroundStyle(.secondary)
                     if !model.disks.isEmpty && model.onlyNTFS {
-                        Button("Tüm harici diskleri göster") { model.onlyNTFS = false; model.selected = model.visible.first?.id }
+                        Button(L("Show all external drives")) { model.onlyNTFS = false; model.selected = model.visible.first?.id }
                     }
                 }.frame(maxWidth: .infinity).padding(.vertical, Theme.xxl).panel()
             }
@@ -140,8 +141,8 @@ struct ContentView: View {
                 HStack(alignment: .top, spacing: Theme.md) {
                     Image(systemName: "info.circle").foregroundStyle(Theme.accent)
                     VStack(alignment: .leading, spacing: Theme.sm) {
-                        Text("Salt okunur ne demek?").fontWeight(.semibold)
-                        Text("Dosyalarını açabilir ve Mac’ine kopyalayabilirsin. Diske dosya eklemek veya düzenlemek için yazmayı etkinleştir.").foregroundStyle(.secondary)
+                        Text(L("What does read-only mean?")).fontWeight(.semibold)
+                        Text(L("You can open files and copy them to your Mac. Enable writing to add or edit files on the drive.")).foregroundStyle(.secondary)
                     }
                 }.panel()
             }
@@ -159,7 +160,7 @@ struct ContentView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: Theme.sm) {
                     Text(disk.name).font(Theme.section).textSelection(.enabled)
-                    Text("\(disk.filesystem.uppercased()) · \(capacity(disk.size)) · Harici disk").foregroundStyle(.secondary)
+                    Text(L("%1$@ · %2$@ · External drive", String(describing: disk.filesystem.uppercased()), String(describing: capacity(disk.size)))).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Label(disk.status, systemImage: !disk.mounted ? "circle.dashed" : disk.writable ? "checkmark.circle.fill" : "lock.fill")
@@ -168,16 +169,16 @@ struct ContentView: View {
             Divider()
             if let free = disk.free {
                 VStack(alignment: .leading, spacing: Theme.sm) {
-                    HStack { Text("\(capacity(disk.used ?? 0)) kullanılıyor"); Spacer(); Text("\(capacity(free)) boş") }
+                    HStack { Text(L("%1$@ used", String(describing: capacity(disk.used ?? 0)))); Spacer(); Text(L("%1$@ free", String(describing: capacity(free)))) }
                         .font(Theme.small).foregroundStyle(.secondary)
                     ProgressView(value: min(1, max(0, disk.usedFraction))).tint(Theme.accent)
-                        .accessibilityLabel("Kullanılan alan").accessibilityValue(capacity(disk.used ?? 0))
+                        .accessibilityLabel(L("Used space")).accessibilityValue(capacity(disk.used ?? 0))
                 }
             }
             Grid(alignment: .leading, horizontalSpacing: Theme.xl, verticalSpacing: Theme.md) {
-                GridRow { Text("Aygıt").foregroundStyle(.secondary); Text("/dev/" + disk.id).textSelection(.enabled) }
-                GridRow { Text("Konum").foregroundStyle(.secondary); Text(disk.mountPoint ?? "Bağlı değil").textSelection(.enabled).lineLimit(2) }
-                GridRow { Text("Erişim").foregroundStyle(.secondary); Text(disk.status) }
+                GridRow { Text(L("Device")).foregroundStyle(.secondary); Text("/dev/" + disk.id).textSelection(.enabled) }
+                GridRow { Text(L("Location")).foregroundStyle(.secondary); Text(disk.mountPoint ?? L("Not mounted")).textSelection(.enabled).lineLimit(2) }
+                GridRow { Text(L("Access")).foregroundStyle(.secondary); Text(disk.status) }
             }.font(Theme.small)
             Divider()
             ViewThatFits(in: .horizontal) {
@@ -185,7 +186,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: Theme.md) { diskButtons(disk) }
             }.disabled(model.busy || model.scanning || model.stale)
             if disk.isNTFS && !disk.writable && !model.backend.ready {
-                Text("Yazma için uyumlu harici bileşenler gerekir. Bu kaynak dağıtımına dahil değildir.")
+                Text(L("Writing components are missing from this build. Download the complete app from Releases."))
                     .font(Theme.small).foregroundStyle(Theme.warning)
             }
         }.panel()
@@ -193,65 +194,76 @@ struct ContentView: View {
 
     @ViewBuilder private func diskButtons(_ disk: DiskVolume) -> some View {
         if disk.isNTFS && !disk.writable {
-            Button { model.action("write", disk: disk) } label: { Label("Yazmayı etkinleştir", systemImage: "pencil") }
+            Button { model.action("write", disk: disk) } label: { Label(L("Enable writing"), systemImage: "pencil") }
                 .buttonStyle(.borderedProminent).controlSize(.large).disabled(!model.backend.ready || !disk.mediaWritable)
         }
-        Button { model.openFinder(disk) } label: { Label("Finder’da aç", systemImage: "folder") }
+        Button { model.openFinder(disk) } label: { Label(L("Open in Finder"), systemImage: "folder") }
             .controlSize(.large).disabled(!disk.mounted)
         if disk.mounted {
             Menu {
-                Button("Bağlantıyı kes") { model.action("unmount", disk: disk) }
-                Button("Güvenle çıkar") { model.action("eject", disk: disk) }
-            } label: { Label("Çıkar", systemImage: "eject") }.controlSize(.large).fixedSize()
+                Button(L("Disconnect")) { model.action("unmount", disk: disk) }
+                Button(L("Safely eject")) { model.action("eject", disk: disk) }
+            } label: { Label(L("Eject"), systemImage: "eject") }.controlSize(.large).fixedSize()
         } else {
-            Button("Salt okunur bağla") { model.action("mount", disk: disk) }.controlSize(.large)
-            Button("Güvenle çıkar") { model.action("eject", disk: disk) }.controlSize(.large)
+            Button(L("Mount read-only")) { model.action("mount", disk: disk) }.controlSize(.large)
+            Button(L("Safely eject")) { model.action("eject", disk: disk) }.controlSize(.large)
         }
     }
 
     private var settings: some View {
         VStack(alignment: .leading, spacing: Theme.xl) {
-            Text("Sana ait bir araç.").font(Theme.title)
+            Text(L("A tool of your own.")).font(Theme.title)
+            VStack(alignment: .leading, spacing: Theme.md) {
+                Picker(L("Language"), selection: $model.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(language.nativeName).tag(language)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .disabled(model.busy || model.scanning)
+                Text(L("Your choice is saved. The interface language changes immediately."))
+                    .font(Theme.small).foregroundStyle(.secondary)
+            }.panel()
             VStack(alignment: .leading, spacing: Theme.lg) {
-                Text("Görünüm").font(Theme.section)
-                Picker("Tema", selection: $appearance) {
-                    Text("Sistem").tag("system"); Text("Açık").tag("light"); Text("Koyu").tag("dark")
+                Text(L("Appearance")).font(Theme.section)
+                Picker(L("Theme"), selection: $appearance) {
+                    Text(L("System")).tag("system"); Text(L("Light")).tag("light"); Text(L("Dark")).tag("dark")
                 }.pickerStyle(.segmented)
             }.panel()
             VStack(alignment: .leading, spacing: Theme.md) {
-                Text("macOS disk erişimi").font(Theme.section)
-                Text("1. Uygulamayı Uygulamalar klasörüne taşı.\n2. Tam Disk Erişimi bölümünde PlainMount’i ekleyip etkinleştir.\n3. Uygulamayı tamamen kapatıp yeniden aç.").fixedSize(horizontal: false, vertical: true)
-                Text("İzin uygulamaya verilir; Terminal veya Codex’in izni bu uygulamanın yerine geçmez.").foregroundStyle(.secondary)
+                Text(L("macOS drive access")).font(Theme.section)
+                Text(L("1. Move the app to Applications.\n2. Add and enable PlainMount in Full Disk Access.\n3. Quit the app completely and reopen it.")).fixedSize(horizontal: false, vertical: true)
+                Text(L("Permission must be granted to PlainMount itself. Permissions for Terminal or another app do not apply.")).foregroundStyle(.secondary)
                 if !AppBuild.isInstalled() {
-                    Label("Önce Uygulamalar klasörüne taşı", systemImage: "folder.badge.plus").foregroundStyle(.primary)
+                    Label(L("Move to Applications first"), systemImage: "folder.badge.plus").foregroundStyle(.primary)
                 }
                 Text(Bundle.main.bundleURL.path).font(Theme.small).foregroundStyle(.secondary).textSelection(.enabled)
                 ViewThatFits(in: .horizontal) {
-                    HStack { Button("Uygulamayı Finder’da göster") { model.revealApplication() }; Button("Tam Disk Erişimi ayarlarını aç") { model.openDiskAccessSettings() } }
-                    VStack(alignment: .leading) { Button("Uygulamayı Finder’da göster") { model.revealApplication() }; Button("Tam Disk Erişimi ayarlarını aç") { model.openDiskAccessSettings() } }
+                    HStack { Button(L("Show application in Finder")) { model.revealApplication() }; Button(L("Open Full Disk Access settings")) { model.openDiskAccessSettings() } }
+                    VStack(alignment: .leading) { Button(L("Show application in Finder")) { model.revealApplication() }; Button(L("Open Full Disk Access settings")) { model.openDiskAccessSettings() } }
                 }
-                Button("Seçilen diske erişimi denetle") { model.checkDiskAccess() }
+                Button(L("Check selected drive access")) { model.checkDiskAccess() }
                     .disabled(model.busy || model.scanning || model.stale || model.selectedDisk == nil || !AppBuild.isInstalled())
                 if let result = model.accessCheckResult { Label(result, systemImage: "checkmark.circle").font(Theme.small) }
-                if model.needsDiskAccess { Text("macOS erişimi reddetti. İzni verdikten sonra uygulamayı yeniden açın ve erişimi tekrar denetleyin.").font(Theme.small).foregroundStyle(.primary) }
-                Text("Denetim dosya yazmaz ve disk bağlantısını değiştirmez. Yönetici izni istenir.").font(Theme.small).foregroundStyle(.secondary)
+                if model.needsDiskAccess { Text(L("macOS denied access. Grant permission, reopen the app, and check access again.")).font(Theme.small).foregroundStyle(.primary) }
+                Text(L("The check does not write files or change the drive connection. Administrator approval is required.")).font(Theme.small).foregroundStyle(.secondary)
             }.panel()
             VStack(alignment: .leading, spacing: Theme.md) {
-                Text("Yazma desteği").font(Theme.section)
-                Label(model.backend.ready ? "NTFS yazma bileşenleri hazır" : "Yazma bileşenleri bulunamadı", systemImage: model.backend.ready ? "checkmark.circle" : "exclamationmark.circle")
+                Text(L("Write support")).font(Theme.section)
+                Label(model.backend.ready ? L("NTFS writing components ready") : L("Writing components not found"), systemImage: model.backend.ready ? "checkmark.circle" : "exclamationmark.circle")
                     .foregroundStyle(model.backend.ready ? Theme.success : Theme.warning)
-                Text("Yazma için macOS yönetici izni istenir. Parolan uygulamada saklanmaz. Diski bağlamak, otomatik dosya yazma testi yapmaz.")
+                Text(L("Writing requires macOS administrator approval. Your password is not stored. Connecting a drive does not run an automatic file-writing test."))
                     .foregroundStyle(.secondary)
             }.panel()
             VStack(alignment: .leading, spacing: Theme.md) {
-                Text("Gizlilik ve tanı").font(Theme.section)
-                Text("Uygulama hesap, reklam, telemetri veya otomatik güncelleme servisi kullanmaz. İşlem geçmişi yalnızca bu oturumda tutulur.").foregroundStyle(.secondary)
-                Button("Tanı dosyasını kaydet…") { model.exportDiagnostics() }.disabled(model.busy)
-                Text("Tanı dosyası disk adlarını ve yerel yolları içerir; yalnızca seçtiğin konuma kaydedilir.").font(Theme.small).foregroundStyle(.secondary)
+                Text(L("Privacy and diagnostics")).font(Theme.section)
+                Text(L("The app has no accounts, ads, telemetry, or automatic update service. Activity is kept for this session only.")).foregroundStyle(.secondary)
+                Button(L("Save diagnostics…")) { model.exportDiagnostics() }.disabled(model.busy)
+                Text(L("Diagnostics include drive names and local paths. They are saved only to the location you choose.")).font(Theme.small).foregroundStyle(.secondary)
             }.panel()
-            Text("PlainMount \(AppBuild.version) · macOS 14+ · Kişisel kullanım").font(Theme.small).foregroundStyle(.secondary)
+            Text(L("PlainMount %1$@ · macOS 14+ · Personal use", String(describing: AppBuild.version))).font(Theme.small).foregroundStyle(.secondary)
             if model.backend.ready {
-                Text("Uygulama kodu MIT lisanslıdır. NTFS-3G ve FUSE-T kendi lisanslarına tabidir; FUSE-T ticari olmayan kullanım için ücretsizdir.")
+                Text(L("Application code is MIT-licensed. NTFS-3G and FUSE-T retain their own licenses; FUSE-T is free for non-commercial use."))
                     .font(Theme.small).foregroundStyle(.secondary)
             }
         }
@@ -259,10 +271,10 @@ struct ContentView: View {
 
     private var activity: some View {
         VStack(alignment: .leading, spacing: Theme.lg) {
-            Text("Bu oturumda.").font(Theme.title)
-            Text("Disk işlemlerinin sonuçları burada görünür. Uygulama kapanınca geçmiş temizlenir.").foregroundStyle(.secondary)
+            Text(L("This session.")).font(Theme.title)
+            Text(L("Drive operation results appear here. Activity is cleared when you quit the app.")).foregroundStyle(.secondary)
             if model.activities.isEmpty {
-                Label("Henüz disk işlemi yapılmadı.", systemImage: "clock").foregroundStyle(.secondary)
+                Label(L("No drive operations yet. Select a drive to get started."), systemImage: "clock").foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading).panel()
             }
             ForEach(model.activities) { item in
@@ -271,7 +283,7 @@ struct ContentView: View {
                         .foregroundStyle(item.failed ? Theme.danger : Theme.success)
                     VStack(alignment: .leading, spacing: Theme.sm) {
                         Text(item.message).textSelection(.enabled)
-                        Text(item.date.formatted(date: .omitted, time: .standard)).font(Theme.small).foregroundStyle(.secondary)
+                        Text(item.date.formatted(.dateTime.hour().minute().second().locale(model.language.locale))).font(Theme.small).foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).panel()
             }
@@ -284,12 +296,12 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: Theme.md) {
                 Text(text).textSelection(.enabled)
                 if let details = model.errorDetails, details != text {
-                    DisclosureGroup("Teknik ayrıntılar") { Text(details).font(Theme.small).textSelection(.enabled) }
+                    DisclosureGroup(L("Technical details")) { Text(details).font(Theme.small).textSelection(.enabled) }
                 }
             }
             Spacer()
             Button { model.error = nil; model.errorDetails = nil } label: { Image(systemName: "xmark") }
-                .accessibilityLabel("Hata mesajını kapat")
+                .accessibilityLabel(L("Dismiss error"))
         }.panel()
     }
 }
@@ -302,7 +314,7 @@ struct ConfirmationSheet: View {
         VStack(alignment: .leading, spacing: Theme.lg) {
             Label(action.title, systemImage: action.kind == "write" ? "pencil.circle" : "eject.circle").font(Theme.section)
             Text(action.detail).fixedSize(horizontal: false, vertical: true)
-            HStack { Spacer(); Button("Vazgeç", action: cancel).keyboardShortcut(.cancelAction); Button(action.button, action: confirm).buttonStyle(.borderedProminent) }
+            HStack { Spacer(); Button(L("Cancel"), action: cancel).keyboardShortcut(.cancelAction); Button(action.button, action: confirm).buttonStyle(.borderedProminent) }
         }.padding(Theme.xl).frame(width: Theme.defaultWidth / 2)
     }
 }

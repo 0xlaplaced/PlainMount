@@ -8,7 +8,7 @@ public enum MountReadiness {
         let deadline = now() + timeout
         while true {
             if try check() { return }
-            guard now() < deadline else { throw ToolError.message("NTFS bağlantısı beklenen sürede hazır olmadı.") }
+            guard now() < deadline else { throw ToolError.message(L("The NTFS connection was not ready in time. Refresh drive status before trying again.")) }
             pause()
         }
     }

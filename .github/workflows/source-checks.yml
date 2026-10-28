@@ -13,6 +13,7 @@ jobs:
       - run: python3 scripts/check_publish_tree.py --self-test
       - run: python3 scripts/check_binary_privacy.py --self-test
       - run: python3 scripts/check_publish_tree.py
+      - run: python3 scripts/check_localization.py
   core:
     runs-on: macos-latest
     steps:
